@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_IMAGE = 'two-tier-flask-app'
+        REPO_URL  = 'https://github.com/LondheShubham153/two-tier-flask-app.git'
+        BRANCH    = 'master'
+    }
+
+    options {
+        timestamps()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('1. Clone Repository') {
+            steps {
+                cleanWs()
+                git branch: "${BRANCH}", url: "${REPO_URL}"
+            }
+        }
+
+        stage('2. Build Docker Image') {
+            steps {
+                sh "docker build -t ${APP_IMAGE} ."
+            }
+        }
+
+        stage('3. Run Tests') {
+            steps {
+                sh '''
+                    if command -v pytest >/dev/null 2>&1; then
+                        pytest
+                    elif python3 -m pytest --version >/dev/null 2>&1; then
+                        python3 -m pytest
+                    else
+                        docker run --rm --entrypoint python3 ${APP_IMAGE} -c "import app; print('app module import OK')"
+                    fi
+                '''
+            }
+        }
+
+        stage('4. Deploy Two-Tier App') {
+            steps {
+                sh '''
+                    docker network create twotier || true
+                    docker rm -f flask-app mysql || true
+                    docker run -d --name mysql --network twotier \
+                        -e MYSQL_ROOT_PASSWORD=root \
+                        -e MYSQL_DATABASE=devops \
+                        -e MYSQL_USER=admin \
+                        -e MYSQL_PASSWORD=admin \
+                        mysql:8.4
+                    docker run -d --name flask-app --network twotier -p 5000:5000 \
+                        -e MYSQL_HOST=mysql \
+                        -e MYSQL_USER=admin \
+                        -e MYSQL_PASSWORD=admin \
+                        -e MYSQL_DB=devops \
+                        ${APP_IMAGE}
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline succeeded for ${APP_IMAGE} on branch ${BRANCH}."
+        }
+        failure {
+            echo "Pipeline failed for ${APP_IMAGE}. Check Console Output for details."
+        }
+        always {
+            node(label: '') {
+                sh 'docker ps -a || true'
+            }
+        }
+    }
+}
