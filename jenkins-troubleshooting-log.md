@@ -8,7 +8,7 @@ A single reference file containing all starting-to-ending commands for the Flask
 
 ### A. Server & Jenkins Permission Setup (Start)
 ```bash
-# Check Jenkins service status and user group membership
+### Check Jenkins service status and user group membership
 sudo systemctl status jenkins
 id jenkins
 
@@ -24,7 +24,7 @@ sudo apt-get update && sudo apt-get install -y python3.14-venv
 sudo apt-get update && sudo apt-get install -y docker-compose-plugin
 docker compose version
 
-#Clone, Build Image, Test & Run Two-Tier App (Core Flow)
+### Clone, Build Image, Test & Run Two-Tier App (Core Flow)
 
 # 1. Clone the repository
 git clone -b master [https://github.com/LondheShubham153/two-tier-flask-app.git](https://github.com/LondheShubham153/two-tier-flask-app.git)
@@ -58,7 +58,7 @@ docker run -d --name flask-app --network twotier -p 5000:5000 \
 
   #Verification, Logs & Cleanup Commands
 
-  # Check running containers and port mapping (0.0.0.0:5000->5000/tcp)
+### Check running containers and port mapping (0.0.0.0:5000->5000/tcp)
 docker ps
 docker ps -a
 
